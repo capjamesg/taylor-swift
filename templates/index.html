@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- 
+      This is an HTML comment
+      You can write text in a comment and the content won't be visible in the page
+    -->
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="https://glitch.com/favicon.ico" />
+
+    <!--
+      This is the page head - it contains info the browser uses
+      Like the title, which appears on the browser tab but not inside the page
+      Further down you'll see the content that displays in the page
+    -->
+    <title>How similar is your voice to Taylor Swift?</title>
+
+    <!-- The website stylesheet -->
+    <link rel="stylesheet" href="/style.css" />
+
+    <!-- The website JavaScript file -->
+    <script src="/script.js" defer></script>
+  </head>
+  <body>
+    <!--
+      The body includes the content you see in the page
+      Each element is defined using tags, like this <div></div>
+      The attributes like class="wrapper" let us style elements in the CSS
+    -->
+    <div class="wrapper">
+      <div class="content" role="main">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/en/9/9f/Midnights_-_Taylor_Swift.png?20221030194148"
+          class="illustration"
+          alt="Editor illustration"
+          title="Click the image!"
+        />
+        <div class="instructions">
+          <h1 class="title">How similar is your voice to Taylor Swift?</h1>
+          <p>
+            Compete to see who has the voice most like Taylor Swift.
+          </p>
+          <p>
+            Record yourself singing a few seconds of a Taylor Swift song to play.
+          </p>
+          <form>
+            <label for="username">Username</label><br>
+            <input id="username" name="username" type="text" /><br><br>
+          </form>
+          <button onclick="play()">
+            Play
+          </button>
+          <h2>
+            Leaderboard
+          </h2>
+          <ul>
+            <li class="leaderboard">
+              <div class="number">
+                1
+              </div>
+              <div class="user">
+                James
+              </div>
+            </li>
+          </ul>
+          <style>
+            ul {
+              padding: 0;
+            }
+            .leaderboard {
+              background-color: #f7f7f7;
+              list-style-type: none;
+              display: flex;
+              flex-direction: row;
+              border-radius: 10px;
+            }
+            .leaderboard .number {
+              background-color: white;
+              flex: 0 10%;
+              padding: 10px;
+              border-radius: 10px;
+            }
+            .leaderboard .user {
+              flex: 1 70%;
+              text-align: right;
+              padding: 10px;
+            }
+            ul:first-child {
+              background-color: purple;
+            }
+            label {
+              font-weight: bold;
+            }
+          </style>
+        </div>
+      </div>
+    </div>
+    <!-- The footer holds our remix button — you can keep or delete it ✂ -->
+    <footer class="footer">
+      <a
+        href="https://jamesg.blog"
+      >
+        Made by capjamesg
+      </a>
+    </footer>
+    <script>
+      var playing = false;
+      var mediaRecorder = null;
+      var chunks = [];
+      
+      function play() {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            console.log("getUserMedia supported.");
+            navigator.mediaDevices
+              .getUserMedia(
+                // constraints - only audio needed for this app
+                {
+                  audio: true,
+                }
+              )
+
+              // Success callback
+              .then((stream) => {
+                console.log(playing);
+                  if (playing) {
+                      mediaRecorder.stop();
+                  }
+
+                  mediaRecorder = new MediaRecorder(stream);
+
+                  mediaRecorder.start();
+
+                  mediaRecorder.ondataavailable = (e) => {
+                    console.log("data available");
+                    chunks.push(e.data);
+                  };
+
+                  mediaRecorder.onstop = (e) => {
+                      
+                      // post to server at localhost:5000, send as wav
+                      const blob = new Blob(chunks, { type: "audio/wav" });
+                      const audioURL = window.URL.createObjectURL(blob);
+                      // audio.src = audioURL;
+
+                      // post as WAV file
+                      const formData = new FormData();
+
+                      formData.append("file", blob, "audio.wav");
+                      
+                      fetch("http://localhost:5000", {
+                        method: "POST",
+                        body: formData,
+                      })
+                        .then((response) => response.json())
+                        .then((data) => {
+                          console.log(data);
+                          alert("Your score is " + data.score);
+                        })
+                        .catch((error) => {
+                          console.error(error);
+                        });
+
+                      console.log(mediaRecorder.state);
+                      alert("Recording stopped");
+                      return;
+                  };
+
+                  playing = true;
+              })
+
+              // Error callback
+              .catch((err) => {
+                console.error(`The following getUserMedia error occurred: ${err}`);
+              });
+          } else {
+            console.log("getUserMedia not supported on your browser!");
+          }
+      }
+    </script>
+  </body>
+</html>
