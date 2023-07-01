@@ -18,17 +18,12 @@
     <title>How similar is your voice to Taylor Swift?</title>
 
     <!-- The website stylesheet -->
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/static/style.css" />
 
     <!-- The website JavaScript file -->
     <script src="/script.js" defer></script>
   </head>
   <body>
-    <!--
-      The body includes the content you see in the page
-      Each element is defined using tags, like this <div></div>
-      The attributes like class="wrapper" let us style elements in the CSS
-    -->
     <div class="wrapper">
       <div class="content" role="main">
         <img
@@ -40,31 +35,15 @@
         <div class="instructions">
           <h1 class="title">How similar is your voice to Taylor Swift?</h1>
           <p>
-            Compete to see who has the voice most like Taylor Swift.
+            Record yourself singing a few seconds of a Taylor Swift song to see how similar your voices are.
           </p>
-          <p>
-            Record yourself singing a few seconds of a Taylor Swift song to play.
-          </p>
-          <form>
-            <label for="username">Username</label><br>
-            <input id="username" name="username" type="text" /><br><br>
-          </form>
-          <button onclick="play()">
-            Play
+          <p id="similarity" class="title"></p>
+          <button onclick="play()" id="play">
+            Play ✅
           </button>
           <h2>
             Leaderboard
           </h2>
-          <ul>
-            <li class="leaderboard">
-              <div class="number">
-                1
-              </div>
-              <div class="user">
-                James
-              </div>
-            </li>
-          </ul>
           <style>
             ul {
               padding: 0;
@@ -93,6 +72,9 @@
             label {
               font-weight: bold;
             }
+            button {
+              width: 100%;
+            }
           </style>
         </div>
       </div>
@@ -112,10 +94,10 @@
       
       function play() {
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            // playing = true;
             console.log("getUserMedia supported.");
             navigator.mediaDevices
               .getUserMedia(
-                // constraints - only audio needed for this app
                 {
                   audio: true,
                 }
@@ -123,10 +105,12 @@
 
               // Success callback
               .then((stream) => {
-                console.log(playing);
                   if (playing) {
                       mediaRecorder.stop();
                   }
+                playing = true;
+                      var button = document.getElementById("play");
+                      button.innerHTML = "Stop 🛑";
 
                   mediaRecorder = new MediaRecorder(stream);
 
@@ -138,36 +122,51 @@
                   };
 
                   mediaRecorder.onstop = (e) => {
-                      
+                      var button = document.getElementById("play");
+                      button.innerHTML = "Play 🎮";
+
                       // post to server at localhost:5000, send as wav
                       const blob = new Blob(chunks, { type: "audio/wav" });
-                      const audioURL = window.URL.createObjectURL(blob);
+                      // const audioURL = window.URL.createObjectURL(blob);
                       // audio.src = audioURL;
 
                       // post as WAV file
                       const formData = new FormData();
 
                       formData.append("file", blob, "audio.wav");
+
+                      // add . . .. load to #similarity
+                      var loading_indicator = document.getElementById("similarity");
                       
-                      fetch("http://localhost:5000", {
+                      setTimeout(function() {
+                        if (loading_indicator.innerHTML == "Loading.") {
+                          loading_indicator.innerHTML = "Loading..";
+                        } else if (loading_indicator.innerHTML == "Loading..") {
+                          loading_indicator.innerHTML = "Loading...";
+                        } else if (loading_indicator.innerHTML == "Loading...") {
+                          loading_indicator.innerHTML = "Loading.";
+                        } else {
+                          loading_indicator.innerHTML = "Loading.";
+                        }
+                      }, 500);
+
+                      fetch("https://swifties.me", {
                         method: "POST",
                         body: formData,
                       })
                         .then((response) => response.json())
                         .then((data) => {
-                          console.log(data);
-                          alert("Your score is " + data.score);
+                          console.log("Success:", data);
+                          data.similarity *= 100;
+                          document.getElementById("similarity").innerHTML = "Your voice is " + data.similarity + "% similar to Taylor Swift's.";
+                  playing = false;
                         })
                         .catch((error) => {
                           console.error(error);
                         });
 
-                      console.log(mediaRecorder.state);
-                      alert("Recording stopped");
-                      return;
+                      chunks = [];
                   };
-
-                  playing = true;
               })
 
               // Error callback
