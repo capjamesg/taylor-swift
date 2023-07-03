@@ -25,21 +25,29 @@ First, you will need to install ImageBind. You can do this by following the offi
 
 In the ImageBind root folder, copy the web app in this repository (`image_bind.py`). Then, install all the requirements for this project:
 
+```bash
 pip install -r ts-requirements.txt
+```
 
 Then, run the web app in debugging mode:
 
+```bash
 python3 web.py
+```
 
 ### SpeechBrain
 
 First, install the dependencies for the project:
 
+```bash
 pip install -r ts-requirements.txt
+```
 
 Then, run the web app in debugging mode:
 
+```bash
 python3 web.py
+```
 
 ## Using the App
 
