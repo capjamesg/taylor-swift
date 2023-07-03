@@ -1,31 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- 
-      This is an HTML comment
-      You can write text in a comment and the content won't be visible in the page
-    -->
-
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="https://glitch.com/favicon.ico" />
 
-    <!--
-      This is the page head - it contains info the browser uses
-      Like the title, which appears on the browser tab but not inside the page
-      Further down you'll see the content that displays in the page
-    -->
+    <link rel="manifest" href="/static/manifest.json" />
     <title>How similar is your voice to Taylor Swift?</title>
 
-    <!-- The website stylesheet -->
     <link rel="stylesheet" href="/static/style.css" />
-
-    <!-- The website JavaScript file -->
-    <script src="/script.js" defer></script>
   </head>
   <body>
     <div class="wrapper">
-      <div class="content" role="main">
+      <div class="content">
         <img
           src="https://upload.wikimedia.org/wikipedia/en/9/9f/Midnights_-_Taylor_Swift.png?20221030194148"
           class="illustration"
@@ -37,14 +24,20 @@
           <p>
             Record yourself singing a few seconds of a Taylor Swift song to see how similar your voices are.
           </p>
-          <p id="similarity" class="title"></p>
+          <p id="similarity" class="title" style="display: none;"></p>
+
           <button onclick="play()" id="play">
             Play ✅
           </button>
-          <h2>
-            Leaderboard
-          </h2>
           <style>
+            #similarity {
+              font-size: 18px;
+              background-color: #f7f7f7;
+              padding: 10px;
+            }
+            #play {
+              margin-top: 20px;
+            }
             ul {
               padding: 0;
             }
@@ -77,16 +70,16 @@
             }
           </style>
         </div>
+      
+        <footer class="footer">
+          <a
+            href="https://jamesg.blog"
+          >
+            Made by capjamesg
+          </a>
+        </footer>
       </div>
     </div>
-    <!-- The footer holds our remix button — you can keep or delete it ✂ -->
-    <footer class="footer">
-      <a
-        href="https://jamesg.blog"
-      >
-        Made by capjamesg
-      </a>
-    </footer>
     <script>
       var playing = false;
       var mediaRecorder = null;
@@ -108,25 +101,27 @@
                   if (playing) {
                       mediaRecorder.stop();
                   }
-                playing = true;
+                    playing = true;
                       var button = document.getElementById("play");
                       button.innerHTML = "Stop 🛑";
 
                   mediaRecorder = new MediaRecorder(stream);
 
-                  mediaRecorder.start();
-
                   mediaRecorder.ondataavailable = (e) => {
-                    console.log("data available");
+                    console.log(e.data);
                     chunks.push(e.data);
                   };
 
+                  // add ios listener
+                  if (mediaRecorder.state == "inactive") {
+                    mediaRecorder.start();
+                  }
                   mediaRecorder.onstop = (e) => {
                       var button = document.getElementById("play");
                       button.innerHTML = "Play 🎮";
 
-                      // post to server at localhost:5000, send as wav
-                      const blob = new Blob(chunks, { type: "audio/wav" });
+                      // post to server at localhost:5000, send as mp
+                      const blob = new Blob(chunks, { type: "video/mp4" });
                       // const audioURL = window.URL.createObjectURL(blob);
                       // audio.src = audioURL;
 
@@ -137,15 +132,17 @@
 
                       // add . . .. load to #similarity
                       var loading_indicator = document.getElementById("similarity");
+                      loading_indicator.style.display = "block";
+
+                      loading_indicator.innerHTML = "Loading.";
                       
-                      setTimeout(function() {
+                      var timer = setTimeout(function() {
+                        var loading_indicator = document.getElementById("similarity");
                         if (loading_indicator.innerHTML == "Loading.") {
                           loading_indicator.innerHTML = "Loading..";
                         } else if (loading_indicator.innerHTML == "Loading..") {
                           loading_indicator.innerHTML = "Loading...";
                         } else if (loading_indicator.innerHTML == "Loading...") {
-                          loading_indicator.innerHTML = "Loading.";
-                        } else {
                           loading_indicator.innerHTML = "Loading.";
                         }
                       }, 500);
@@ -157,9 +154,13 @@
                         .then((response) => response.json())
                         .then((data) => {
                           console.log("Success:", data);
-                          data.similarity *= 100;
+                          // round to 2 decimal places
+                          data.similarity = Math.round(data.similarity * 100) / 100;
+                          // turn into %
+                          data.similarity = data.similarity * 100;
                           document.getElementById("similarity").innerHTML = "Your voice is " + data.similarity + "% similar to Taylor Swift's.";
-                  playing = false;
+                          playing = false;
+                          clearTimeout(timer);
                         })
                         .catch((error) => {
                           console.error(error);

@@ -1,0 +1,19 @@
+{
+    "short_name": "swiftify",
+    "name": "swiftify",
+    "icons": [
+        {
+        "src": "https://upload.wikimedia.org/wikipedia/en/9/9f/Midnights_-_Taylor_Swift.png?20221030194148",
+        "type": "image/png",
+        "sizes": "512x512 120x120 152x152 167x167 180x180 192x192 384x384",
+        "purpose": "any maskable"
+        }
+    ],
+    "id": "/?source=pwa",
+    "start_url": "/?source=pwa",
+    "background_color": "#fff",
+    "display": "standalone",
+    "scope": "/",
+    "theme_color": "#69F7BE",
+    "description": "See how similar your voice is to Taylor Swift."
+}

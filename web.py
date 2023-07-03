@@ -1,42 +1,27 @@
 import data
 import torch
-from models import imagebind_model
-from models.imagebind_model import ModalityType
 import os
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify
 import tempfile
 import librosa
 import numpy as np
 
+import warnings
+
+# supress UserWarning
+warnings.filterwarnings("ignore", category=UserWarning)
+
+from speechbrain.pretrained import SpeakerRecognition
+
+verification = SpeakerRecognition.from_hparams(
+    source="speechbrain/spkrec-ecapa-voxceleb",
+    savedir="pretrained_models/spkrec-ecapa-voxceleb",
+)
+
+
 app = Flask(__name__, static_folder="./static")
 
-def get_embedding(audio):
-    audio = {
-        ModalityType.AUDIO: data.load_and_transform_audio_data([audio], device),
-    }
-    audio_embedding = model(audio)
-
-    return audio_embedding[ModalityType.AUDIO]
-
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-
-# Instantiate model
-model = imagebind_model.imagebind_huge(pretrained=True)
-model.eval()
-model.to(device)
-
-vectors = []
-
-with torch.no_grad():
-    for file in os.listdir("./data/"):
-        # if ends in wav
-        if file.endswith(".wav") and "_" not in file:
-            a = {
-                ModalityType.AUDIO: data.load_and_transform_audio_data(["./data/" + file], device),
-            }
-            a_embedding = model(a)
-
-            vectors.append(a_embedding[ModalityType.AUDIO])
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -45,54 +30,62 @@ def index():
         audio = request.files["file"]
         # get similarity
         with torch.no_grad():
-                # uses torchvision to load audio, transform as necessary please
-            # audio = n
-            # create tmp file
-
             # create tmp file
             tmp = tempfile.NamedTemporaryFile()
             audio.save(tmp.name)
 
-            # clean up audio with librosa
-            # y, sr = librosa.load(tmp.name)
+            import subprocess
 
-            # # remove silence
-            # y, _ = librosa.effects.trim(y)
+            import random
+            file_name = str(random.randint(0, 10000)) + ".wav"
 
-            # # convert to mono
-            # y = librosa.to_mono(y)
+            subprocess.call(
+                [
+                    "ffmpeg",
+                    "-i",
+                    tmp.name,
+                    "-acodec",
+                    "pcm_s16le",
+                    "-ac",
+                    "1",
+                    "-ar",
+                    "16000",
+                    "./" + file_name,
+                ]
+            )
 
-            # # save as wav
-            # librosa.output.write_wav(tmp.name, y, sr)
-            
-            audio = {
-                ModalityType.AUDIO: data.load_and_transform_audio_data([tmp.name], device),
-            }
+            all_sims = []
 
-            audio_embedding = model(audio)
+            for file in os.listdir("./data/")[:5]:
+                if file.endswith(".wav") and "_" not in file:
+                    score, prediction = verification.verify_files(
+                        file_name, "./data/" + file
+                    )
 
-            sims = []
+                    print(score, prediction)
 
-            for v in vectors:
-                sim = torch.cosine_similarity(audio_embedding[ModalityType.AUDIO], v)
-                print(sim)
-                sims.append(sim)
+                    if prediction == False:
+                        continue
 
-            # print avg. sim
-            avg_sim = sum(sims) / len(sims)
+                    if score == 1:
+                        continue
 
-            avg_sim = avg_sim.cpu().numpy()
+                    print(file, score)
 
-            # cast from float32 to float py
-            avg_sim = avg_sim.astype(float)
-            
-            # round to 2 decimal places
-            avg_sim = np.round(avg_sim, 2)
+                    all_sims.append(score)
 
-            print(avg_sim)
+            os.remove("./" + file_name)
+
+            if len(all_sims) == 0:
+                avg = 0
+            else:
+                avg = max(all_sims)
+
+            # round to 1 decimal place
+            avg_sim = np.round(avg, 1)
 
         # return similarity
-        return jsonify({"similarity": avg_sim[0]})
+        return jsonify({"similarity": avg_sim.tolist()})
     
     return render_template("index.html")
 
