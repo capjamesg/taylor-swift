@@ -1,6 +1,8 @@
+![swifties.me homepage](screenshot.png)
+
 # swifties.me
 
-[swifties.me](https://swifties.me) is a web application that lets you find out how similar your voice is to Taylor Swift. Swifties offers two voice comparison methods: (i) using ImageBind audio embeddings, and; (ii) using the SpeechBrain speaker verification model.
+[swifties.me](https://swifties.me) is a web application that lets you find out how similar your voice is to Taylor Swift. Swifties offers two voice comparison methods: (i) using [ImageBind](https://github.com/facebookresearch/ImageBind) audio embeddings, and; (ii) using the [SpeechBrain speaker verification model](https://github.com/speechbrain/speechbrain/).
 
 More investigation is needed to determine which method is more accurate. It is not clear whether ImageBind is good for speaker identification: in testing, qualitatively, ImageBind ranked Taylor Swift speaking higher than non-Taylor Swift samples. But, there were false positives. This was the case for SpeechBrain. It may be the case that another approach would achieve better results.
 
