@@ -1,10 +1,12 @@
-import data
 import torch
 import os
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify
+from flask import Flask, render_template, request, jsonify
 import tempfile
 import librosa
+import json
 import numpy as np
+import random
+import subprocess
 
 import warnings
 
@@ -18,6 +20,13 @@ verification = SpeakerRecognition.from_hparams(
     savedir="pretrained_models/spkrec-ecapa-voxceleb",
 )
 
+if not os.path.exists("leaderboard.json"):
+    with open("leaderboard.json", "w") as f:
+        json.dump([], f)
+
+with open("leaderboard.json", "r") as f:
+    leaderboard = json.load(f)
+    
 
 app = Flask(__name__, static_folder="./static")
 
@@ -28,15 +37,19 @@ def index():
     if request.method == "POST":
         # get body from request audio/ogg; codecs=opus
         audio = request.files["file"]
+        username = request.form["username"]
+
+        usernames = set([entry["username"] for entry in leaderboard])
+
+        while username in usernames:
+            username += str(random.randint(0, 9))
+
         # get similarity
         with torch.no_grad():
             # create tmp file
             tmp = tempfile.NamedTemporaryFile()
             audio.save(tmp.name)
 
-            import subprocess
-
-            import random
             file_name = str(random.randint(0, 10000)) + ".wav"
 
             subprocess.call(
@@ -62,15 +75,11 @@ def index():
                         file_name, "./data/" + file
                     )
 
-                    print(score, prediction)
-
                     if prediction == False:
                         continue
 
                     if score == 1:
                         continue
-
-                    print(file, score)
 
                     all_sims.append(score)
 
@@ -84,10 +93,33 @@ def index():
             # round to 1 decimal place
             avg_sim = np.round(avg, 1)
 
-        # return similarity
-        return jsonify({"similarity": avg_sim.tolist()})
+            # cast to int
+            avg_sim = int(avg_sim)
+
+            if username:
+                # leaderboard is ordered by score, so we need to insert at the position where the score is less than the current score
+                found = False
+                for i, entry in enumerate(leaderboard):
+                    if entry["similarity"] <= avg_sim:
+                        leaderboard.insert(i, {"username": username, "similarity": avg_sim})
+                        found = True
+                        break
+
+                if not found:
+                    leaderboard.append({"username": username, "similarity": avg_sim})
+
+                with open("leaderboard.json", "w") as f:
+                    json.dump(leaderboard, f)
+
+        return jsonify({"similarity": avg_sim, "leaderboard": leaderboard})
     
-    return render_template("index.html")
+    # add rank to leaderboard
+    leaderboard_with_rank = [
+        {"username": entry["username"], "similarity": entry["similarity"], "rank": i + 1}
+        for i, entry in enumerate(leaderboard)
+    ]
+    
+    return render_template("index.html", leaderboard=leaderboard_with_rank)
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8084)

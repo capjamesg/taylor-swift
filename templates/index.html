@@ -28,9 +28,29 @@
           </p>
           <p id="similarity" class="title" style="display: none;"></p>
 
+          <h2>Leaderboard</h2>
+          <ul id="leaderboard">
+            {% if (leaderboard.length == 0) %}
+              <p>Nobody has entered yet. Be the first to play!</p>
+            {% endif %}
+            {% for item in leaderboard %}
+              <li class="leaderboard">
+                <span class="number">#{{ item.rank }}</span>
+                <span class="user">{{ item.username }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+
+          <h2>Play the Game</h2>
+          <p>Set a username if you want to be added to the leaderboard.</p>
+          
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="username" />
+
           <button onclick="play()" id="play">
             Play ✅
           </button>
+
           <style>
             #similarity {
               font-size: 18px;
@@ -49,6 +69,7 @@
               display: flex;
               flex-direction: row;
               border-radius: 10px;
+              margin-bottom: 10px;
             }
             .leaderboard .number {
               background-color: white;
@@ -66,6 +87,10 @@
             }
             label {
               font-weight: bold;
+              display: block;
+            }
+            input {
+              width: 100%;
             }
             button {
               width: 100%;
@@ -130,6 +155,10 @@
                       // post as WAV file
                       const formData = new FormData();
 
+                      // add username
+                      var username = document.getElementById("username").value;
+                      formData.append("username", username);
+
                       formData.append("file", blob, "audio.wav");
 
                       // add . . .. load to #similarity
@@ -149,12 +178,14 @@
                         }
                       }, 500);
 
-                      fetch("https://swifties.me", {
+                      fetch("http://localhost:8084", {
                         method: "POST",
                         body: formData,
                       })
                         .then((response) => response.json())
                         .then((data) => {
+                          data, leaderboard = data;
+
                           console.log("Success:", data);
                           // round to 2 decimal places
                           data.similarity = Math.round(data.similarity * 100) / 100;
@@ -163,6 +194,25 @@
                           document.getElementById("similarity").innerHTML = "Your voice is " + data.similarity + "% similar to Taylor Swift's.";
                           playing = false;
                           clearTimeout(timer);
+
+                          // reset leaderboard and add new items
+                          var leaderboard = document.getElementById("leaderboard");
+                          leaderboard.innerHTML = "";
+
+                          for (var i = 0; i < data.leaderboard.length; i++) {
+                            var item = data.leaderboard[i];
+                            var li = document.createElement("li");
+                            li.className = "leaderboard";
+                            var number = document.createElement("span");
+                            number.className = "number";
+                            number.innerHTML = "#" + (i + 1);
+                            var user = document.createElement("span");
+                            user.className = "user";
+                            user.innerHTML = item.username;
+                            li.appendChild(number);
+                            li.appendChild(user);
+                            leaderboard.appendChild(li);
+                          }
                         })
                         .catch((error) => {
                           console.error(error);
